@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  ai-voice-agent:
+    build: .
+    container_name: ai_voice_agent
+    volumes:
+      - ./:/app                 
+      - ./ollama_repo:/ollama_repo
+    environment:
+      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OLLAMA_REPO=/ollama_repo
+    devices:
+      - /dev/snd:/dev/snd
+    privileged: true

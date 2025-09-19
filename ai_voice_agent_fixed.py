@@ -12,6 +12,7 @@ import ollama
 from groq import Groq
 import io
 import tempfile
+from Utils import agent
 
 load_dotenv()
 
@@ -49,7 +50,16 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Conversation history for Gemma3
 full_transcript = [
-    {"role": "system", "content": "You are Gemma3, a helpful AI assistant created by Google. Answer questions clearly and concisely in less than 300 characters. Be friendly and engaging."},
+    {"role": "system", 
+     "content": (
+        "You are Gemma3, a helpful, intelligent AI assistant created by Google.\n"
+        "- Respond accurately and informatively.\n"
+        "- Use 50-150 words, conversational but specific.\n"
+        "- Avoid repetition and overused emojis. Never reply with just emojis.\n"
+        "- Ask relevant follow-up questions sometimes for engagement.\n"
+        "- Provide details/examples if helpful.\n"
+        "- Be natural, engaging, and respond uniquely every time."
+    )}
 ]
 
 # Processing state
@@ -107,7 +117,7 @@ def generate_speech_groq(text):
     try:
         response = groq_client.audio.speech.create(
             model="playai-tts",
-            voice="Fritz-PlayAI",
+            voice="Arista-PlayAI",
             input=text,
             response_format="wav"
         )
@@ -146,7 +156,7 @@ def generate_ai_response(transcript_text):
         print("🤖 Gemma3: ", end="", flush=True)
 
         ollama_stream = ollama.chat(
-            model="gemma3:270m",
+            model="gemma3:1b",
             messages=full_transcript,
             stream=True,
         )
