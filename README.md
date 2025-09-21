@@ -40,8 +40,8 @@ sabarnopingbix/ai-voice-agent:latest
 
 1 – Clone and enter the repo
 ```
-git clone https://github.com/your-org/ai-voice-agent.git
-cd ai-voice-agent
+git clone https://github.com/SABARNO-PRAMANICK/GemmaVoiceBot.git
+cd GemmaVoiceBot
 ```
 
 2 – Install deps (uv pip is ~2–3× faster)
