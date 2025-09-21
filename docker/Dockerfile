@@ -1,7 +1,7 @@
 # Use official Python 3.12 slim image as base
 FROM python:3.12-slim
 
-# Install system dependencies for PyAudio and other libs
+# Install system dependencies for PyAudio, audio, and other libs (combined for efficiency)
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
@@ -11,25 +11,22 @@ RUN apt-get update && apt-get install -y \
     git \
     ffmpeg \
     curl \
+    pulseaudio \
+    libpulse-dev \
+    libasound2-plugins \
+    && apt-get install -y mpv \
     && rm -rf /var/lib/apt/lists/*
-
-# Install mpv for cross-platform audio playback (optional)
-RUN apt-get update && apt-get install -y mpv && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
+# Copy requirements and install (upgraded pip with wheel for faster installs)
 COPY requirements.txt /app/requirements.txt
-
-# Install python dependencies
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt
 
 # Copy app code
 COPY . /app
-
-# Expose ports (if needed, none for this CLI app)
 
 # Default command to run the app
 CMD ["python", "ai_voice_agent_fixed.py"]

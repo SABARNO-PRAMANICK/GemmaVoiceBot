@@ -1,209 +1,106 @@
-# AI Voice Agent with Groq PlayAI TTS - Setup Guide
+# AI Voice Agent (Whisper STT + Groq PlayAI TTS)
 
-## 🚀 Why Groq PlayAI TTS?
+A Python 3.12 voice assistant that listens through your microphone, transcribes speech with Whisper, feeds it to a Groq-powered LLM, and replies with PlayAI TTS in real time.  
+Run it either (a) directly with the ultra-fast **uv** runtime or (b) as a pre-built Docker image from Docker Hub.
 
-Based on latest benchmarks and user testing:
-- **10x faster than real-time** (140 characters/second)
-- **Users prefer it 10:1 over ElevenLabs** in blind tests
-- **$50/1M characters** vs ElevenLabs' higher pricing
-- **No API restrictions** or abuse detection issues
-- **23 voices available** (19 English, 4 Arabic)
-- **Contextual understanding** - maintains conversation flow
-- **Enterprise-grade reliability** with Groq's LPU infrastructure
+---
 
-## Prerequisites
+## ✨ Features
 
-### 1. Get API Keys (Both Free Tier Available)
+* Real-time microphone capture (PyAudio / ALSA)  
+* Whisper-large-v3 transcription  
+* Groq LLM for conversational logic  
+* Groq PlayAI TTS streaming playback  
+* Single-file Docker image (python:3.12-slim)
 
-#### AssemblyAI
-1. Go to https://www.assemblyai.com
-2. Sign up and get your API key
-3. Free tier includes real-time streaming
+---
 
-#### Groq
-1. Go to https://console.groq.com
-2. Sign up and get your API key from https://console.groq.com/keys
-3. **Free tier includes TTS credits**
+## 🏃‍♂️ Quick Start — Docker
 
-### 2. System Dependencies
-
-#### Windows
-```bash
-# PyAudio should install automatically
-# If issues, download wheel from: https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+1 – Pull image
+```
+docker pull sabarnopingbix/ai-voice-agent:latest
 ```
 
-#### macOS
-```bash
-brew install portaudio
+2 – Run (replace the two keys with your own)
+```
+docker run -it --privileged \
+-e ASSEMBLYAI_API_KEY="YOUR_ASSEMBLYAI_KEY" \
+-e GROQ_API_KEY="YOUR_GROQ_KEY" \
+sabarnopingbix/ai-voice-agent:latest
 ```
 
-#### Ubuntu/Debian
-```bash
-sudo apt install portaudio19-dev python3-pyaudio
+> **Windows / WSL 2 note**  
+> • `--privileged` lets the container access audio.  
+> • If `--device /dev/snd` fails, omit it and use the PulseAudio socket method below.
+
+---
+
+## 🖥️ Run Locally with **uv**
+
+1 – Clone and enter the repo
+```
+git clone https://github.com/your-org/ai-voice-agent.git
+cd ai-voice-agent
 ```
 
-### 3. Install Ollama + Gemma3
-```bash
-# Install Ollama from https://ollama.com
-# Download Gemma3 model
-ollama pull gemma3:270m
+2 – Install deps (uv pip is ~2–3× faster)
+```
+uv pip install -r requirements.txt
 ```
 
-## Installation
-
-### 1. Install Dependencies
-```bash
-# Install required packages
-pip install websocket-client pyaudio ollama groq python-dotenv pygame
+3 – Run the agent
+```
+ASSEMBLYAI_API_KEY="YOUR_ASSEMBLYAI_KEY" \
+GROQ_API_KEY="YOUR_GROQ_KEY" \
+uv run ai_voice_agent_fixed.py
 ```
 
-### 2. Setup Environment
-```bash
-# Copy environment template
-cp .env.template.groq .env
+---
 
-# Edit .env with your API keys
-ASSEMBLYAI_API_KEY=your_assemblyai_key
-GROQ_API_KEY=your_groq_key
+## 🔑 Required Environment Variables
+
+| Variable             | Purpose                                   |
+|----------------------|-------------------------------------------|
+| `ASSEMBLYAI_API_KEY` | Whisper STT / AssemblyAI access           |
+| `GROQ_API_KEY`       | Groq LLM + Groq PlayAI TTS                |
+
+---
+
+## 🔈 Audio on Windows (WSL 2)
+
+Docker on Windows cannot map `/dev/snd`.  
+If you need microphone playback inside the container:
+
+Start PulseAudio server on Windows (example)
+```
+C:\PulseAudio\bin\pulseaudio.exe
 ```
 
-### 3. Run the Voice Agent
-```bash
-python ai_voice_agent_groq_tts.py
+Run container with PulseAudio socket mount
+```
+docker run -it --privileged \
+-v /run/user/1000/pulse:/run/user/1000/pulse \
+-e PULSE_SERVER=unix:/run/user/1000/pulse/native \
+-e ASSEMBLYAI_API_KEY="YOUR_ASSEMBLYAI_KEY" \
+-e GROQ_API_KEY="YOUR_GROQ_KEY" \
+sabarnopingbix/ai-voice-agent:latest
 ```
 
-## Available Voices
+---
 
-Groq PlayAI TTS offers 23 high-quality voices:
+## 🛠️ Build the Image Yourself
 
-### English Voices (19 available)
-- **Fritz-PlayAI** (Default) - Professional male
-- **Arista-PlayAI** - Professional female  
-- **Cheyenne-PlayAI** - Friendly female
-- **And 16 more voices...**
-
-### Arabic Voices (4 available)
-- Specialized for Middle Eastern market
-- Natural Arabic pronunciation and prosody
-
-To change voice, edit the code:
-```python
-voice="Arista-PlayAI"  # Change this line in generate_speech_groq()
+```
+docker build -t ai-voice-agent .
+docker run -it --privileged \
+-e ASSEMBLYAI_API_KEY="YOUR_ASSEMBLYAI_KEY" \
+-e GROQ_API_KEY="YOUR_GROQ_KEY" \
+ai-voice-agent
 ```
 
-## Performance Comparison
+---
 
-| Service | Speed | Cost/1M chars | User Preference | Restrictions |
-|---------|-------|---------------|-----------------|--------------|
-| **Groq PlayAI** | 140 chars/sec | $50 | 10:1 preferred | None |
-| ElevenLabs | ~75 chars/sec | $80-150+ | Baseline | Free tier blocks |
-| OpenAI TTS | ~50 chars/sec | $15 | Lower quality | Rate limits |
+## 📄 License
 
-## Troubleshooting
-
-### Common Issues
-
-#### 1. Groq API Key Issues
-```bash
-# Verify your API key works
-curl -X POST "https://api.groq.com/openai/v1/audio/speech" \
-  -H "Authorization: Bearer YOUR_GROQ_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "playai-tts", "input": "test", "voice": "Fritz-PlayAI"}'
-```
-
-#### 2. Audio Playback Issues
-```bash
-# Install pygame for better audio support
-pip install pygame
-
-# On Windows, pygame usually works out of the box
-# On Linux, you may need: sudo apt install python3-pygame
-```
-
-#### 3. PyAudio Installation
-```bash
-# Windows: Use pre-built wheel
-pip install pyaudio
-
-# If that fails, download from:
-# https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
-
-# macOS:
-brew install portaudio
-pip install pyaudio
-
-# Ubuntu/Debian:
-sudo apt install portaudio19-dev python3-dev
-pip install pyaudio
-```
-
-#### 4. Ollama Connection Issues
-```bash
-# Check if Ollama is running
-ollama list
-
-# Start Ollama if needed
-# macOS/Linux: ollama serve
-# Windows: Should run automatically
-
-# Reinstall Gemma3 if needed
-ollama pull gemma3:270m
-```
-
-## Advanced Configuration
-
-### Custom Voice Selection
-```python
-# Edit the generate_speech_groq() function:
-response = groq_client.audio.speech.create(
-    model="playai-tts",
-    voice="Arista-PlayAI",  # Change voice here
-    input=text,
-    response_format="wav"
-)
-```
-
-### Response Format Options
-- `wav` (default) - Best compatibility
-- `mp3` - Smaller file size  
-- `flac` - Highest quality
-
-### Model Variants
-- `playai-tts` - English (default)
-- `playai-tts-arabic` - Arabic language support
-
-## Cost Analysis
-
-### Typical Usage Scenarios
-
-#### Light Usage (Personal Assistant)
-- ~1000 words/day response = ~5000 characters
-- Monthly cost: ~$7.50 with Groq vs $40+ with ElevenLabs
-
-#### Moderate Usage (Customer Support)
-- ~10,000 words/day = ~50,000 characters  
-- Monthly cost: ~$75 with Groq vs $400+ with ElevenLabs
-
-#### Heavy Usage (Voice Apps)
-- ~100,000 words/day = ~500,000 characters
-- Monthly cost: ~$750 with Groq vs $4000+ with ElevenLabs
-
-## Why This Combination Works
-
-1. **AssemblyAI WebSocket**: Ultra-low latency speech recognition
-2. **Gemma3 270M**: Fast, lightweight AI responses via local Ollama
-3. **Groq PlayAI TTS**: Fastest, highest-quality text-to-speech
-4. **Cross-platform audio**: Works on Windows, macOS, Linux
-
-Total pipeline latency: **~500ms end-to-end** for natural conversation flow.
-
-## Support
-
-- Groq Docs: https://console.groq.com/docs/text-to-speech
-- AssemblyAI Docs: https://www.assemblyai.com/docs
-- Ollama Docs: https://ollama.com/docs
-- PlayAI Info: https://play.ai
-
-This setup gives you enterprise-grade voice AI at a fraction of the cost!
+MIT © 2025 sabarnopingbix
