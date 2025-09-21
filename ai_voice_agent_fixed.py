@@ -1,4 +1,3 @@
-
 import pyaudio
 import websocket
 import json
@@ -8,11 +7,9 @@ from urllib.parse import urlencode
 from datetime import datetime
 import os
 from dotenv import load_dotenv
-import ollama
 from groq import Groq
 import io
 import tempfile
-from Utils import agent
 
 load_dotenv()
 
@@ -45,16 +42,16 @@ ws_app = None
 audio_thread = None
 stop_event = threading.Event()  # To signal the audio thread to stop
 
-# Groq client for TTS
+# Groq client for TTS and chat completions
 groq_client = Groq(api_key=GROQ_API_KEY)
 
-# Conversation history for Gemma3
+# Conversation history
 full_transcript = [
     {"role": "system", 
      "content": (
-        "You are Gemma3, a helpful, intelligent AI assistant created by Google.\n"
+        "You are PingBix AI Assistant, a helpful, intelligent AI assistant created by Pingbix.com .\n"
         "- Respond accurately and informatively.\n"
-        "- Use 50-150 words, conversational but specific.\n"
+        "- Use 25 words maximum, conversational but specific.\n"
         "- Avoid repetition and overused emojis. Never reply with just emojis.\n"
         "- Ask relevant follow-up questions sometimes for engagement.\n"
         "- Provide details/examples if helpful.\n"
@@ -139,7 +136,7 @@ def generate_speech_groq(text):
         return None
 
 def generate_ai_response(transcript_text):
-    """Generate AI response using Gemma3 and convert to speech with Groq"""
+    """Generate AI response using Groq llama-3.1-8b-instant and convert to speech with Groq"""
     global is_processing, full_transcript
 
     with processing_lock:
@@ -152,30 +149,34 @@ def generate_ai_response(transcript_text):
         full_transcript.append({"role": "user", "content": transcript_text})
         print(f"\n👤 User: {transcript_text}")
 
-        # Generate response with Gemma3
-        print("🤖 Gemma3: ", end="", flush=True)
+        # Generate response with Groq
+        print("🤖 Groq: ", end="", flush=True)
 
-        ollama_stream = ollama.chat(
-            model="gemma3:1b",
+        # Send full history as messages
+        completion = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
             messages=full_transcript,
+            temperature=1,
+            max_tokens=1024,  # Note: max_tokens instead of max_completion_tokens for consistency
+            top_p=1,
             stream=True,
+            stop=None
         )
 
         text_buffer = ""
         full_text = ""
 
-        # Stream response and convert to speech
-        for chunk in ollama_stream:
-            chunk_text = chunk['message']['content']
+        for chunk in completion:
+            chunk_text = chunk.choices[0].delta.content or ""
             text_buffer += chunk_text
             full_text += chunk_text
 
-            # Convert complete sentences to speech using Groq PlayAI
+            # Convert complete sentences to speech
             if text_buffer.endswith('.') or text_buffer.endswith('!') or text_buffer.endswith('?'):
                 if text_buffer.strip():
                     print(text_buffer, end="", flush=True)
 
-                    # Generate speech with Groq PlayAI TTS
+                    # Generate speech with Groq TTS
                     audio_data = generate_speech_groq(text_buffer.strip())
                     if audio_data:
                         play_audio_cross_platform(audio_data)
@@ -202,7 +203,7 @@ def generate_ai_response(transcript_text):
     except Exception as e:
         print(f"\n❌ Error generating AI response: {e}")
         error_message = "Sorry, I'm having trouble processing that right now."
-        print(f"🤖 Gemma3: {error_message}")
+        print(f"🤖 Groq: {error_message}")
     finally:
         is_processing = False
 
@@ -302,20 +303,6 @@ def run():
     print("🚀 AI Voice Agent with Groq PlayAI TTS")
     print("=" * 45)
 
-    # Test Ollama connection first
-    try:
-        print("🔍 Testing Ollama + Gemma3 connection...")
-        test_response = ollama.chat(
-            model="gemma3:270m",
-            messages=[{"role": "user", "content": "Hello"}],
-        )
-        print(f"✅ Gemma3 ready: {test_response['message']['content'][:50]}...")
-    except Exception as e:
-        print(f"❌ Ollama/Gemma3 error: {e}")
-        print("Make sure Ollama is running and gemma3:270m is installed:")
-        print("  ollama pull gemma3:270m")
-        return
-
     # Test Groq TTS connection
     try:
         print("🔍 Testing Groq PlayAI TTS connection...")
@@ -409,6 +396,7 @@ def run():
         if audio:
             audio.terminate()
         print("✅ Cleanup complete. Goodbye!")
+
 
 if __name__ == "__main__":
     run()

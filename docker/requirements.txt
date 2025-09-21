@@ -1,16 +1,8 @@
 # AI Voice Agent with Gemma3 - Requirements
 websocket-client   
 assemblyai[extras]
-ollama
-elevenlabs 
 python-dotenv
 python-mpv
 pyaudio
 groq
 pygame
-langchain
-langchain-core
-langchain-community
-langchain-groq
-langchain-ollama
-langgraph

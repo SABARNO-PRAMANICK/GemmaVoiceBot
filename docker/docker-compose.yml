@@ -1,16 +1,18 @@
-version: "3.8"
-
 services:
   ai-voice-agent:
-    build: .
+    build: ./docker
     container_name: ai_voice_agent
     volumes:
-      - ./:/app                 
-      - ./ollama_repo:/ollama_repo
+      - ../:/app  # mount project root
+      - /dev/snd:/dev/snd  # Basic audio device
+      - /run/user/1000/pulse:/run/user/1000/pulse  # Mount PulseAudio socket (for WSL2)
     environment:
       - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
-      - OLLAMA_REPO=/ollama_repo
+      - PULSE_SERVER=unix:/run/user/1000/pulse/native  # Point to PulseAudio server
+    cap_add:
+      - SYS_ADMIN  # For audio access
     devices:
       - /dev/snd:/dev/snd
     privileged: true
+    command: ["python", "/app/ai_voice_agent_fixed.py"]
